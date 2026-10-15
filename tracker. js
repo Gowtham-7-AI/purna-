@@ -1,0 +1,36 @@
+// Simple visit logger: sends time + device info to your Google Sheet.
+// No IP lookup, no fingerprinting, no precise location.
+(function () {
+  // PASTE your Google Apps Script web-app URL between the quotes:
+  var ENDPOINT = "https://script.google.com/macros/s/AKfycbyMOmLpTqCU4GkSRAS9rm1J0s2hDXkrFDtSW4DBh7tNvXRDigv7c0NQuCRLr0ylU8A0/exec";
+  if (!ENDPOINT || ENDPOINT.indexOf("PASTE") === 0) return;
+
+  function get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+  // Label each person by link: yoursite.com/?who=purna
+  var params = new URLSearchParams(location.search);
+  var who = params.get("who");
+  if (who) set("visitor_who", who); else who = get("visitor_who") || "unknown";
+
+  var loads = (parseInt(get("visitor_loads"), 10) || 0) + 1;
+  set("visitor_loads", loads);
+
+  var data = new URLSearchParams({
+    who: who,
+    page: location.pathname.split("/").pop() || "index.html",
+    loads: loads,
+    time: new Date().toString(),
+    tz: (Intl.DateTimeFormat().resolvedOptions().timeZone || ""),
+    lang: navigator.language || "",
+    screen: screen.width + "x" + screen.height,
+    device: navigator.userAgent,
+    referrer: document.referrer
+  });
+
+  try {
+    if (navigator.sendBeacon) navigator.sendBeacon(ENDPOINT, data);
+    else fetch(ENDPOINT, { method: "POST", mode: "no-cors", body: data });
+  } catch (e) {}
+
+})();
